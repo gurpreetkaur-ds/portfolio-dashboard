@@ -1,50 +1,116 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { FaMicrophone, FaMicrophoneSlash } from "react-icons/fa";
 
 export default function VoiceAssistant() {
-  const speak = (text) => {
-    const msg = new SpeechSynthesisUtterance(text);
-    window.speechSynthesis.speak(msg);
-  };
+  const recognitionRef = useRef(null);
+
+  const [listening, setListening] = useState(false);
 
   useEffect(() => {
-    speak("Welcome to portfolio");
-  }, []);
+    if (typeof window === "undefined") return;
 
-  const startListening = () => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
+    if (!SpeechRecognition) return;
+
     const recognition = new SpeechRecognition();
-    recognition.start();
 
-    recognition.onresult = (e) => {
-      const cmd = e.results[0][0].transcript.toLowerCase();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
 
-      if (cmd.includes("about"))
-        document.getElementById("about").scrollIntoView({ behavior: "smooth" });
-
-      if (cmd.includes("projects"))
-        document.getElementById("projects").scrollIntoView({ behavior: "smooth" });
+    recognition.onstart = () => {
+      setListening(true);
     };
-  };
+
+    recognition.onend = () => {
+      setListening(false);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript =
+        event.results[event.results.length - 1][0].transcript.toLowerCase();
+
+      console.log("Voice:", transcript);
+
+      navigate(transcript);
+    };
+
+    recognitionRef.current = recognition;
+  }, []);
+
+  function navigate(text) {
+    if (text.includes("home")) {
+      scroll("home");
+    }
+
+    else if (text.includes("about")) {
+      scroll("about");
+    }
+
+    else if (text.includes("project")) {
+      scroll("projects");
+    }
+
+    else if (text.includes("gallery")) {
+      scroll("gallery");
+    }
+
+    else if (text.includes("skill")) {
+      scroll("skills");
+    }
+
+    else if (text.includes("certificate")) {
+      scroll("certifications");
+    }
+
+    else if (text.includes("education")) {
+      scroll("education");
+    }
+
+    else if (text.includes("contact")) {
+      scroll("contact");
+    }
+
+    else if (text.includes("resume")) {
+      window.open("/resume.pdf");
+    }
+  }
+
+  function scroll(id) {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
+  function toggleMic() {
+    if (!recognitionRef.current) {
+      alert("Speech Recognition is not supported in this browser.");
+      return;
+    }
+
+    if (listening) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+    }
+  }
 
   return (
-    <button onClick={startListening} style={btn}>
-      🎤
+    <button
+      className="mic-button"
+      onClick={toggleMic}
+      title="Voice Assistant"
+    >
+      {listening ? (
+        <FaMicrophoneSlash size={24} />
+      ) : (
+        <FaMicrophone size={24} />
+      )}
     </button>
   );
 }
-
-const btn = {
-  position: "fixed",
-  bottom: 30,
-  right: 30,
-  width: 60,
-  height: 60,
-  borderRadius: "50%",
-  background: "#4da3ff",
-  border: "none",
-  boxShadow: "0 0 20px rgba(0,140,255,0.5)",
-};

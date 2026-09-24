@@ -1,84 +1,369 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, useGLTF } from "@react-three/drei";
-import { EffectComposer, Bloom } from "@react-three/postprocessing";
-import { useRef, useEffect, useState } from "react";
+import { useGLTF } from "@react-three/drei";
+import { useEffect, useRef } from "react";
+import * as THREE from "three";
 
-function Model({ scale }) {
-  const { scene } = useGLTF("/models/butterfly.glb");
-  const ref = useRef();
 
-  useFrame(({ mouse }) => {
-    if (ref.current) {
-      ref.current.rotation.y += 0.002;
-      ref.current.rotation.x = mouse.y * 0.1;
-      ref.current.rotation.y += mouse.x * 0.1;
-    }
-  });
+function ButterflyModel() {
+  const { scene, animations } =
+    useGLTF("/models/butterfly.glb");
 
-  return (
-    <primitive
-      ref={ref}
-      object={scene}
-      scale={scale}
-      position={[0, 0, 0]}
-    />
-  );
-}
+  const groupRef = useRef(null);
+  const mixerRef = useRef(null);
 
-export default function ButterflyScene() {
-  const [scale, setScale] = useState(3);
 
   useEffect(() => {
-    const update = () => {
-      if (window.innerWidth < 600) setScale(1.8);
-      else if (window.innerWidth < 1024) setScale(2.5);
-      else setScale(3.5);
+
+    /*
+     * ==========================================
+     * KEEP ORIGINAL TEXTURE
+     * ==========================================
+     *
+     * The texture already contains the black
+     * butterfly body and black wing patterns.
+     *
+     * We DO NOT remove material.map.
+     */
+
+    scene.traverse((object) => {
+
+      if (!object.isMesh || !object.material) {
+        return;
+      }
+
+      const materials = Array.isArray(object.material)
+        ? object.material
+        : [object.material];
+
+
+      materials.forEach((material) => {
+
+        /*
+         * Make sure the original texture stays.
+         */
+        if (!material.map) {
+          return;
+        }
+
+
+        /*
+         * White material color so we can work
+         * directly with the original texture.
+         */
+        material.color =
+          new THREE.Color("#ffffff");
+
+
+        /*
+         * Blue glow.
+         */
+        material.emissive =
+          new THREE.Color("#006eff");
+
+        material.emissiveIntensity = 0.25;
+
+
+        material.metalness = 0.12;
+        material.roughness = 0.42;
+
+
+        /*
+         * ======================================
+         * BLUE WINGS / BLACK PATTERN SHADER
+         * ======================================
+         *
+         * Dark pixels from the original texture
+         * remain BLACK.
+         *
+         * Bright orange/yellow areas become BLUE.
+         */
+
+        material.onBeforeCompile = (shader) => {
+
+          shader.fragmentShader =
+            shader.fragmentShader.replace(
+              "#include <map_fragment>",
+
+              `
+              #include <map_fragment>
+
+              /*
+               * Calculate brightness of original
+               * texture.
+               */
+              float textureBrightness =
+                  dot(
+                    diffuseColor.rgb,
+                    vec3(
+                      0.299,
+                      0.587,
+                      0.114
+                    )
+                  );
+
+
+              /*
+               * Dark parts of original texture.
+               *
+               * These are the butterfly's black
+               * body and black wing patterns.
+               */
+              float blackMask =
+                  1.0 -
+                  smoothstep(
+                    0.08,
+                    0.25,
+                    textureBrightness
+                  );
+
+
+              /*
+               * Futuristic blue.
+               */
+              vec3 blue =
+                  vec3(
+                    0.015,
+                    0.38,
+                    1.0
+                  );
+
+
+              /*
+               * Preserve brightness from the
+               * original texture.
+               */
+              vec3 blueWing =
+                  blue *
+                  max(
+                    textureBrightness * 2.0,
+                    0.35
+                  );
+
+
+              /*
+               * Mix:
+               *
+               * BLACK original areas
+               * +
+               * BLUE wing areas
+               */
+              diffuseColor.rgb =
+                  mix(
+                    blueWing,
+                    vec3(
+                      0.002,
+                      0.004,
+                      0.008
+                    ),
+                    blackMask
+                  );
+              `
+            );
+        };
+
+
+        material.needsUpdate = true;
+
+      });
+
+    });
+
+
+    /*
+     * ==========================================
+     * REAL GLB WING ANIMATION
+     * ==========================================
+     */
+
+    if (animations.length > 0) {
+
+      mixerRef.current =
+        new THREE.AnimationMixer(scene);
+
+
+      /*
+       * Use "idle" animation if available.
+       */
+      const idleAnimation =
+        animations.find(
+          (animation) =>
+            animation.name
+              .toLowerCase() === "idle"
+        ) ||
+        animations[0];
+
+
+      const action =
+        mixerRef.current.clipAction(
+          idleAnimation
+        );
+
+
+      action.reset();
+
+      action.setLoop(
+        THREE.LoopRepeat,
+        Infinity
+      );
+
+      action.play();
+
+    }
+
+
+    return () => {
+
+      if (mixerRef.current) {
+
+        mixerRef.current.stopAllAction();
+
+        mixerRef.current = null;
+
+      }
+
     };
 
-    update();
-    window.addEventListener("resize", update);
+  }, [scene, animations]);
 
-    return () => window.removeEventListener("resize", update);
-  }, []);
+
+  /*
+   * ==========================================
+   * ANIMATION
+   * ==========================================
+   */
+
+  useFrame((state, delta) => {
+
+    const time =
+      state.clock.getElapsedTime();
+
+
+    /*
+     * Keep the actual GLB wing animation running.
+     */
+    if (mixerRef.current) {
+
+      mixerRef.current.update(delta);
+
+    }
+
+
+    if (groupRef.current) {
+
+      /*
+       * ========================================
+       * WHOLE BUTTERFLY ROTATION
+       * ========================================
+       *
+       * Slow enough that the butterfly does
+       * not disappear constantly.
+       */
+
+      groupRef.current.rotation.y =
+        time * 0.16;
+
+
+      /*
+       * Small natural tilt.
+       */
+
+      groupRef.current.rotation.z =
+        Math.sin(time * 0.5) * 0.025;
+
+
+      /*
+       * Floating.
+       */
+
+      groupRef.current.position.y =
+        Math.sin(time * 0.8) * 0.035;
+
+    }
+
+  });
+
 
   return (
-    <div style={bg}>
-      <Canvas
-        camera={{ position: [0, 0, 3.5], fov: 55 }}
-      >
-        {/* 🌌 LIGHTING */}
-        <ambientLight intensity={0.25} />
 
-        <pointLight position={[5, 5, 5]} intensity={3} color="#4da3ff" />
-        <pointLight position={[-5, -5, -5]} intensity={2} color="#1a6cff" />
+    <group
+      ref={groupRef}
+      scale={10}
+      position={[0, 0, 0]}
+    >
 
-        {/* 🦋 BIG BACKGROUND BUTTERFLY */}
-        <Model scale={scale} />
+      <primitive object={scene} />
 
-        {/* 💙 BLOOM GLOW */}
-        <EffectComposer>
-          <Bloom
-            intensity={1.8}
-            luminanceThreshold={0.15}
-            luminanceSmoothing={0.9}
-          />
-        </EffectComposer>
+    </group>
 
-        <OrbitControls
-          enableZoom={false}
-          enablePan={false}
-          autoRotate
-          autoRotateSpeed={0.5}
-        />
-      </Canvas>
-    </div>
   );
+
 }
 
-const bg = {
-  position: "fixed",
-  inset: 0,
-  zIndex: -1,
-};
+
+/*
+ * ============================================
+ * BUTTERFLY SCENE
+ * ============================================
+ */
+
+export default function ButterflyScene() {
+
+  return (
+
+    <div className="butterfly-scene">
+
+      <Canvas
+        camera={{
+          position: [0, 0, 2.5],
+          fov: 40,
+          near: 0.01,
+          far: 100,
+        }}
+
+        dpr={[1, 2]}
+
+        gl={{
+          alpha: true,
+          antialias: true,
+          powerPreference:
+            "high-performance",
+        }}
+      >
+
+        <ambientLight
+          intensity={0.65}
+        />
+
+
+        <pointLight
+          position={[2, 2, 3]}
+          intensity={3}
+          distance={8}
+          color="#168cff"
+        />
+
+
+        <pointLight
+          position={[-2, -1, 2]}
+          intensity={2}
+          distance={6}
+          color="#00c8ff"
+        />
+
+
+        <ButterflyModel />
+
+      </Canvas>
+
+    </div>
+
+  );
+
+}
+
+
+useGLTF.preload(
+  "/models/butterfly.glb"
+);

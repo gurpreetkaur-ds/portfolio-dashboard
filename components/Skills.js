@@ -1,49 +1,126 @@
-export default function Skills() {
-  const skills = [
-    "Python",
-    "Machine Learning",
-    "Deep Learning",
-    "TensorFlow",
-    "Scikit-learn",
-    "SQL",
-    "Power BI",
-    "Docker",
-    "LangChain",
-  ];
+"use client";
 
+import { motion } from "framer-motion";
+import {
+  FaPython,
+  FaDatabase,
+  FaBrain,
+  FaChartBar,
+  FaChartLine,
+  FaCode,
+  FaRobot,
+  FaNetworkWired,
+} from "react-icons/fa";
+import { DEFAULT_CONTENT } from "../lib/content-defaults";
+
+const ICONS = {
+  python: <FaPython />,
+  database: <FaDatabase />,
+  brain: <FaBrain />,
+  chartBar: <FaChartBar />,
+  chart: <FaChartLine />,
+  code: <FaCode />,
+  robot: <FaRobot />,
+  network: <FaNetworkWired />,
+};
+
+const COLORS = ["#4DA3FF", "#00D9FF"];
+
+export default function Skills({ items = DEFAULT_CONTENT.skills }) {
   return (
-    <section id="skills" style={section}>
-      <h2 style={title}>Skills</h2>
+    <section className="skills">
 
-      <div style={grid}>
-        {skills.map((skill, i) => (
-          <span key={i} style={pill}>
-            {skill}
-          </span>
-        ))}
+      <div className="skills-header">
+
+        <span className="section-tag">
+          MY SKILLS
+        </span>
+
+        <h2>
+          Technical Expertise
+        </h2>
+
+        <p>
+          A collection of technologies, frameworks and tools
+          I've used to build Artificial Intelligence,
+          Machine Learning and Data Science projects.
+        </p>
+
       </div>
+
+      <div className="skills-grid">
+
+        {items.map((skill, index) => (
+
+          <motion.div
+            key={skill.title}
+            className="skill-card"
+            initial={{
+              opacity: 0,
+              y: 40,
+            }}
+            whileInView={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: .6,
+              delay: index * .15,
+            }}
+            viewport={{
+              once: true,
+            }}
+          >
+
+            <div className="skill-top">
+
+              <div
+                className="skill-icon"
+                style={{
+                  color: COLORS[index % COLORS.length],
+                }}
+              >
+                {ICONS[skill.iconKey] || ICONS.code}
+              </div>
+
+              <h3>
+                {skill.title}
+              </h3>
+
+            </div>
+
+            <div className="progress">
+
+              <motion.div
+                className="progress-fill"
+                initial={{
+                  width: 0,
+                }}
+                whileInView={{
+                  width: `${skill.level}%`,
+                }}
+                transition={{
+                  duration: 1.4,
+                }}
+                viewport={{
+                  once: true,
+                }}
+              />
+
+            </div>
+
+            <span className="skill-level">
+
+              {skill.level}%
+
+            </span>
+
+          </motion.div>
+
+        ))}
+
+      </div>
+
     </section>
   );
 }
-
-const section = { padding: "80px 20px" };
-
-const title = {
-  fontSize: "36px",
-  color: "#4da3ff",
-  marginBottom: "20px",
-};
-
-const grid = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "10px",
-};
-
-const pill = {
-  padding: "8px 14px",
-  borderRadius: "20px",
-  border: "1px solid rgba(77,163,255,0.3)",
-  color: "#4da3ff",
-  fontSize: "12px",
-};

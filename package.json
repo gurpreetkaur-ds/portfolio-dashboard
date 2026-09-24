@@ -1,32 +1,28 @@
 {
   "name": "portfolio-dashboard",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start"
   },
   "dependencies": {
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.6.0",
-    "@react-three/postprocessing": "^3.0.4",
-    "framer-motion": "^12.38.0",
-    "next": "16.2.4",
-    "postprocessing": "^6.39.1",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "three": "^0.184.0"
+    "@neon/config": "^1.7.3",
+    "@neon/env": "^1.4.4",
+    "@neondatabase/serverless": "latest",
+    "@react-three/drei": "latest",
+    "@react-three/fiber": "latest",
+    "framer-motion": "latest",
+    "jose": "^6.2.12",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-icons": "latest",
+    "three": "latest"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.4",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "@types/node": "26.6.2",
+    "typescript": "7.0.2"
   }
 }
